@@ -1,0 +1,24 @@
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: agendamentolunetto
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      # Banco SQLite persistido no volume abaixo.
+      DATABASE_URL: "file:/app/data/prod.db"
+    volumes:
+      - lunetto_data:/app/data
+    networks:
+      - default
+
+volumes:
+  lunetto_data:
+
+networks:
+  default:
+    # Nome fixo para o container landpage-app (nginx) conseguir se conectar a
+    # esta rede e alcançar o container pelo nome "agendamentolunetto".
+    name: agendamento-lunetto_default

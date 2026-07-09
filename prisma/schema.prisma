@@ -1,0 +1,143 @@
+// Schema do banco local (SQLite) do app "Agenda de Prestadores".
+// App pessoal, single-user, sem autenticação, sem servidor externo.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+}
+
+// -----------------------------------------------------------------------------
+// Prestador de serviço (eletricista, encanador, faxineira, técnico de ar-condicionado,
+// entregador etc.)
+// -----------------------------------------------------------------------------
+model Prestador {
+  id        Int      @id @default(autoincrement())
+
+  nome      String
+
+  // Categoria/tipo de serviço.
+  // SQLite não suporta enum nativo do Prisma (o conector rejeita `enum` no schema),
+  // então o valor é validado na camada da aplicação (Zod) contra um conjunto fixo.
+  // Ver CategoriaPrestador em src/lib/constants.ts (ou equivalente).
+  categoria        String
+  // Preenchido apenas quando categoria = "OUTRO", para descrever o serviço
+  // sem precisar alterar o conjunto fixo de categorias.
+  categoriaOutro   String?
+
+  telefone  String
+
+  empresa      String?
+  observacoes  String?
+
+  // Soft delete: em vez de apagar o registro (o que apagaria o vínculo com o
+  // histórico de agendamentos), o prestador é marcado como inativo e some
+  // das listas/seletores de "novo agendamento", mas o histórico continua íntegro.
+  ativo     Boolean  @default(true)
+
+  criadoEm     DateTime @default(now())
+  atualizadoEm DateTime @updatedAt
+
+  agendamentos Agendamento[]
+  orcamentos   Orcamento[]
+
+  @@index([categoria])
+  @@index([nome])
+  @@index([ativo])
+  @@map("prestadores")
+}
+
+// -----------------------------------------------------------------------------
+// Agendamento (visita marcada de um prestador ao apartamento)
+// -----------------------------------------------------------------------------
+model Agendamento {
+  id Int @id @default(autoincrement())
+
+  // --- Data e horário -------------------------------------------------------
+  // Estratégia deliberada para evitar bugs de fuso horário no calendário:
+  // NÃO usamos o tipo DateTime do Prisma para o momento agendado. DateTime
+  // no SQLite é gravado como texto ISO-8601 convertido para UTC, e reconverter
+  // isso de volta para "hora de parede" depende do fuso do processo Node/browser
+  // que faz a leitura — para um app local isso costuma coincidir, mas qualquer
+  // divergência (ex.: rodar `next dev` numa máquina/contêiner com TZ diferente,
+  // ou um `new Date(isoString)` interpretado como UTC em vez de local) desloca
+  // o agendamento de dia, quebrando o calendário mensal.
+  //
+  // Por isso guardamos a data e o horário como texto "de parede", sem fuso:
+  //   data:    "YYYY-MM-DD"  (ex.: "2026-07-08")
+  //   horario: "HH:mm"       (ex.: "14:30", 24h)
+  // Strings ISO nesse formato ordenam corretamente por ordem lexicográfica,
+  // então dá para fazer ORDER BY / gte / lte direto no banco sem nenhuma
+  // conversão de fuso, e o agrupamento por mês/semana no calendário vira um
+  // simples prefixo de string (ex.: data.startsWith("2026-07")).
+  data    String
+  horario String
+
+  // Validado na aplicação: "AGENDADO" | "CONCLUIDO" | "CANCELADO".
+  // Mesma observação do enum acima: SQLite não suporta enum nativo do Prisma.
+  status  String @default("AGENDADO")
+
+  motivo      String
+  observacoes String?
+
+  prestadorId Int
+  // onDelete: Restrict -> impede excluir (hard delete) um Prestador que já
+  // tenha Agendamentos, para nunca apagar histórico "sem querer" via cascade
+  // nem deixar Agendamento órfão (sem prestador) via SetNull. A exclusão de
+  // um prestador com histórico deve ser feita via soft delete (Prestador.ativo
+  // = false); exclusão física só é permitida quando ele nunca teve agendamento.
+  prestador Prestador @relation(fields: [prestadorId], references: [id], onDelete: Restrict)
+
+  criadoEm     DateTime @default(now())
+  atualizadoEm DateTime @updatedAt
+
+  @@index([data])
+  @@index([data, horario])
+  @@index([status])
+  @@index([status, data])
+  @@index([prestadorId])
+  @@map("agendamentos")
+}
+
+// -----------------------------------------------------------------------------
+// Orçamento (preço que um prestador passou para um serviço).
+// Serve para comparar prestadores da mesma categoria e ver qual é mais barato.
+// -----------------------------------------------------------------------------
+model Orcamento {
+  id Int @id @default(autoincrement())
+
+  // O que foi orçado (ex.: "Troca do disjuntor geral").
+  descricao String
+
+  // Valor em CENTAVOS de BRL. Ex.: R$ 1.250,50 -> 125050.
+  // Int de propósito: o SQLite não tem tipo decimal real (DECIMAL cai em
+  // afinidade NUMERIC e frações viram REAL/double, perdendo precisão). Centavos
+  // em Int comparam e ordenam de forma exata — que é justamente o que a tela de
+  // comparação precisa ("qual é o mais barato").
+  valorCentavos Int
+
+  // Validado na aplicação: "PENDENTE" | "ACEITO" | "RECUSADO".
+  // (SQLite não suporta enum nativo do Prisma; mesmo padrão de Agendamento.status.)
+  status String @default("PENDENTE")
+
+  // Validade do orçamento como data "de parede" "YYYY-MM-DD" (mesma convenção de
+  // Agendamento.data), opcional. Nunca usar new Date(iso) sobre este campo.
+  validadeAte String?
+
+  observacoes String?
+
+  prestadorId Int
+  // onDelete: Restrict -> igual a Agendamento: nunca apagar orçamentos via cascade
+  // nem deixá-los órfãos. Prestador com orçamento sai por soft delete (ativo=false);
+  // hard delete só quando não há agendamento NEM orçamento.
+  prestador Prestador @relation(fields: [prestadorId], references: [id], onDelete: Restrict)
+
+  criadoEm     DateTime @default(now())
+  atualizadoEm DateTime @updatedAt
+
+  @@index([prestadorId])
+  @@index([status])
+  @@map("orcamentos")
+}

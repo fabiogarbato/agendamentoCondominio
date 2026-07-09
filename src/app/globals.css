@@ -1,0 +1,125 @@
+@import "tailwindcss";
+
+/* Dark mode por CLASSE (.dark no <html>, gerenciada pelo next-themes).
+   OBRIGATORIO no Tailwind v4: sem isto, dark: vira prefers-color-scheme
+   e o toggle nao funcionaria. */
+@custom-variant dark (&:where(.dark, .dark *));
+
+/* ===================== TEMA CLARO (default) ===================== */
+:root {
+  color-scheme: light;
+
+  /* superficies em camadas: background < surface < card = "soft depth" */
+  --background:    #f3f5f8;
+  --surface:       #fbfcfd;
+  --card:          #ffffff;
+  --border:        #e4e7ec;
+  --border-strong: #808893; /* borda de input: >=3:1 sobre card (WCAG 1.4.11) */
+  --foreground:    #171a1f;
+  --muted:         #5c6672;
+  --muted-faint:   #6b7280; /* texto de-enfatizado legível (ex.: dia fora do mês) */
+
+  --primary:            #2563eb;
+  --primary-hover:      #1d4ed8;
+  --primary-foreground: #ffffff;
+  --ring:               #2563eb;
+
+  --destructive:            #dc2626;
+  --destructive-foreground: #ffffff;
+  --danger:                 #b91c1c;
+
+  --agendado:  #3b82f6;  --agendado-bg:  #dbeafe;  --agendado-fg:  #1e40af;
+  --concluido: #10b981;  --concluido-bg: #d1fae5;  --concluido-fg: #065f46;
+  --cancelado: #9ca3af;  --cancelado-bg: #e5e7eb;  --cancelado-fg: #374151;
+
+  --shadow-1: 0 1px 2px rgba(16, 24, 40, 0.04), 0 2px 6px rgba(16, 24, 40, 0.06);
+  --shadow-2: 0 4px 12px rgba(16, 24, 40, 0.08), 0 2px 6px rgba(16, 24, 40, 0.05);
+}
+
+/* ===================== TEMA ESCURO ===================== */
+.dark {
+  color-scheme: dark;
+
+  --background:    #0e1116;
+  --surface:       #131720;
+  --card:          #171b22;
+  --border:        #272c36;
+  --border-strong: #626c82; /* borda de input: >=3:1 sobre card (WCAG 1.4.11) */
+  --foreground:    #e6e9ef;
+  --muted:         #9aa3b2;
+  --muted-faint:   #828b99; /* texto de-enfatizado legível (ex.: dia fora do mês) */
+
+  --primary:            #60a5fa;
+  --primary-hover:      #93c5fd;
+  --primary-foreground: #0b1220;
+  --ring:               #60a5fa;
+
+  --destructive:            #f87171;
+  --destructive-foreground: #450a0a;
+  --danger:                 #f87171;
+
+  --agendado:  #60a5fa;  --agendado-bg:  #16324f;  --agendado-fg:  #bfdbfe;
+  --concluido: #34d399;  --concluido-bg: #123528;  --concluido-fg: #a7f3d0;
+  --cancelado: #6b7280;  --cancelado-bg: #262b34;  --cancelado-fg: #c7cdd8;
+
+  --shadow-1: 0 1px 2px rgba(0, 0, 0, 0.5), 0 2px 8px rgba(0, 0, 0, 0.35);
+  --shadow-2: 0 6px 16px rgba(0, 0, 0, 0.5), 0 2px 6px rgba(0, 0, 0, 0.4);
+}
+
+/* ===== toastify seguindo os tokens =====
+   <ToastContainer theme={resolvedTheme}> escolhe light/dark; como --card e
+   --foreground ja trocam com .dark, os dois conjuntos resolvem certo. */
+:root {
+  --toastify-color-light:      var(--card);
+  --toastify-text-color-light: var(--foreground);
+  --toastify-color-dark:       var(--card);
+  --toastify-text-color-dark:  var(--foreground);
+  --toastify-color-success:    var(--concluido);
+  --toastify-color-error:      var(--destructive);
+  --toastify-color-info:       var(--primary);
+}
+
+/* ===== tokens como utilitarios Tailwind v4 ===== */
+@theme inline {
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+
+  --color-background:    var(--background);
+  --color-surface:       var(--surface);
+  --color-card:          var(--card);
+  --color-border:        var(--border);
+  --color-border-strong: var(--border-strong);
+  --color-foreground:    var(--foreground);
+  --color-muted:         var(--muted);
+  --color-muted-faint:   var(--muted-faint);
+
+  --color-primary:            var(--primary);
+  --color-primary-hover:      var(--primary-hover);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-ring:               var(--ring);
+
+  --color-destructive:            var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-danger:                 var(--danger);
+
+  --color-agendado:     var(--agendado);
+  --color-agendado-bg:  var(--agendado-bg);
+  --color-agendado-fg:  var(--agendado-fg);
+  --color-concluido:    var(--concluido);
+  --color-concluido-bg: var(--concluido-bg);
+  --color-concluido-fg: var(--concluido-fg);
+  --color-cancelado:    var(--cancelado);
+  --color-cancelado-bg: var(--cancelado-bg);
+  --color-cancelado-fg: var(--cancelado-fg);
+
+  --shadow-card:     var(--shadow-1);
+  --shadow-elevated: var(--shadow-2);
+}
+
+@layer base {
+  body {
+    background: var(--background);
+    color: var(--foreground);
+    font-family: var(--font-sans), system-ui, sans-serif;
+  }
+}
