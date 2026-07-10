@@ -3,6 +3,12 @@ FROM node:22-slim
 
 WORKDIR /app
 
+# DATABASE_URL precisa existir já no build: o `prisma generate` carrega o
+# prisma.config.ts, que resolve env("DATABASE_URL"). É o mesmo valor usado em
+# runtime (o compose reafirma). O banco só é criado/migrado quando o container
+# sobe (prisma migrate deploy no CMD), então definir aqui não toca em disco.
+ENV DATABASE_URL="file:/app/data/prod.db"
+
 # openssl é necessário para o Prisma; ca-certificates para TLS de saída.
 RUN apt-get update \
   && apt-get install -y --no-install-recommends openssl ca-certificates \
