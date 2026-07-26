@@ -1,62 +1,59 @@
 import Link from "next/link";
 import { OrcamentoCard } from "@/components/OrcamentoCard";
+import { OrcamentosResumo } from "@/components/OrcamentosResumo";
 import { PageHeader } from "@/components/PageHeader";
 import { LinkButton } from "@/components/ui/Button";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { Icon } from "@/components/ui/Icon";
-import { CATEGORIAS_PRESTADOR, labelCategoria } from "@/lib/constants";
 import { formatarBRL } from "@/lib/money";
 import { listarOrcamentos } from "@/lib/queries/orcamentos";
-import type { OrcamentoComPrestador } from "@/types";
+import type { OrcamentoComRelacoes } from "@/types";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 type Grupo = {
-  chave: string;
-  categoria: string;
+  servicoId: number;
   titulo: string;
-  itens: OrcamentoComPrestador[];
+  itens: OrcamentoComRelacoes[];
 };
 
-const ordemCategoria = new Map<string, number>(
-  CATEGORIAS_PRESTADOR.map((c, i) => [c.value, i]),
-);
-
-// Agrupa por categoria; "OUTRO" é subdividido por categoriaOutro para não misturar
-// serviços diferentes (ex.: piscineiro vs. guincho) no mesmo balde de comparação.
-function agrupar(orcamentos: OrcamentoComPrestador[]): Grupo[] {
-  const grupos = new Map<string, Grupo>();
+// Agrupa por SERVIÇO — a unidade de comparação. Só faz sentido comparar
+// orçamentos do mesmo serviço; serviços diferentes (mesmo do mesmo prestador)
+// ficam em blocos separados e nunca são comparados entre si.
+function agrupar(orcamentos: OrcamentoComRelacoes[]): Grupo[] {
+  const grupos = new Map<number, Grupo>();
   for (const o of orcamentos) {
-    const cat = o.prestador.categoria;
-    const sub =
-      cat === "OUTRO" ? (o.prestador.categoriaOutro?.trim() || "Outro") : "";
-    const chave = cat === "OUTRO" ? `OUTRO::${sub.toLowerCase()}` : cat;
-    const titulo = cat === "OUTRO" ? sub : labelCategoria(cat);
-    if (!grupos.has(chave)) {
-      grupos.set(chave, { chave, categoria: cat, titulo, itens: [] });
+    if (!grupos.has(o.servicoId)) {
+      grupos.set(o.servicoId, { servicoId: o.servicoId, titulo: o.servico.nome, itens: [] });
     }
-    grupos.get(chave)!.itens.push(o);
+    grupos.get(o.servicoId)!.itens.push(o);
   }
-  return [...grupos.values()].sort((a, b) => {
-    const oa = ordemCategoria.get(a.categoria) ?? 999;
-    const ob = ordemCategoria.get(b.categoria) ?? 999;
-    return oa !== ob ? oa - ob : a.titulo.localeCompare(b.titulo, "pt-BR");
-  });
+  return [...grupos.values()].sort((a, b) =>
+    a.titulo.localeCompare(b.titulo, "pt-BR"),
+  );
 }
 
-export default async function OrcamentosPage({
-  searchParams,
-}: {
-  searchParams: Promise<{ categoria?: string }>;
-}) {
-  await searchParams;
+export default async function OrcamentosPage() {
   const orcamentos = await listarOrcamentos();
   const grupos = agrupar(orcamentos);
+
+  // Total aprovado = soma dos orçamentos ACEITOS (o que já está comprometido).
+  const aceitos = orcamentos.filter((o) => o.status === "ACEITO");
+  const totalAprovadoCentavos = aceitos.reduce((s, o) => s + o.valorCentavos, 0);
+  const qtdPendentes = orcamentos.filter((o) => o.status === "PENDENTE").length;
 
   return (
     <div className="flex flex-col gap-6">
       <PageHeader title="Orçamentos" />
+
+      {orcamentos.length > 0 ? (
+        <OrcamentosResumo
+          totalAprovadoCentavos={totalAprovadoCentavos}
+          qtdAceitos={aceitos.length}
+          qtdPendentes={qtdPendentes}
+        />
+      ) : null}
 
       <LinkButton href="/orcamentos/novo">
         <Icon name="plus" className="size-4" />
@@ -67,7 +64,7 @@ export default async function OrcamentosPage({
         <EmptyState
           icone="orcamentos"
           titulo="Nenhum orçamento ainda"
-          descricao="Cadastre os preços que os prestadores passaram e compare por categoria para achar o mais barato."
+          descricao="Cadastre os preços que os prestadores passaram e compare por serviço para achar o mais barato."
         />
       ) : (
         <div className="flex flex-col gap-8">
@@ -82,7 +79,7 @@ export default async function OrcamentosPage({
             const qtd = grupo.itens.length;
 
             return (
-              <section key={grupo.chave} className="flex flex-col gap-3">
+              <section key={grupo.servicoId} className="flex flex-col gap-3">
                 <div>
                   <div className="flex items-end justify-between gap-3">
                     <h2 className="text-base font-bold tracking-tight text-foreground">
@@ -123,7 +120,7 @@ export default async function OrcamentosPage({
 
                 {candidatos.length < 2 ? (
                   <Link
-                    href={`/orcamentos/novo?categoria=${grupo.categoria}`}
+                    href={`/orcamentos/novo?servico=${encodeURIComponent(grupo.titulo)}`}
                     className="inline-flex items-center gap-1.5 px-1 text-xs font-medium text-primary"
                   >
                     <Icon name="plus" className="size-3.5" />

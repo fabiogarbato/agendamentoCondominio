@@ -3,12 +3,18 @@ import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { orcamentoSchema } from "@/lib/validations/orcamento.schema";
 import { listarOrcamentos } from "@/lib/queries/orcamentos";
+import { acharOuCriarServico } from "@/lib/queries/servicos";
 
 export const runtime = "nodejs";
 
 export async function GET(request: NextRequest) {
-  const categoria = request.nextUrl.searchParams.get("categoria") ?? undefined;
-  return NextResponse.json(await listarOrcamentos({ categoria }));
+  const servicoIdParam = request.nextUrl.searchParams.get("servicoId");
+  const servicoId = servicoIdParam ? Number(servicoIdParam) : undefined;
+  return NextResponse.json(
+    await listarOrcamentos(
+      servicoId && Number.isInteger(servicoId) ? { servicoId } : {},
+    ),
+  );
 }
 
 export async function POST(request: NextRequest) {
@@ -26,16 +32,25 @@ export async function POST(request: NextRequest) {
   }
 
   try {
-    const orcamento = await prisma.orcamento.create({
-      data: {
-        prestadorId: parsed.data.prestadorId,
-        descricao: parsed.data.descricao,
-        valorCentavos: parsed.data.valorCentavos,
-        status: parsed.data.status ?? "PENDENTE",
-        validadeAte: parsed.data.validadeAte || null,
-        observacoes: parsed.data.observacoes ?? null,
-      },
-      include: { prestador: true },
+    // Serviço e orçamento na mesma transação: se algo falhar, não fica serviço órfão.
+    const orcamento = await prisma.$transaction(async (tx) => {
+      const servicoId = await acharOuCriarServico(tx, parsed.data.servicoNome);
+      return tx.orcamento.create({
+        data: {
+          servicoId,
+          prestadorId: parsed.data.prestadorId,
+          descricao: parsed.data.descricao?.trim() || null,
+          valorCentavos: parsed.data.valorCentavos,
+          status: parsed.data.status ?? "PENDENTE",
+          validadeAte: parsed.data.validadeAte || null,
+          observacoes: parsed.data.observacoes ?? null,
+        },
+        include: {
+          servico: true,
+          prestador: true,
+          anexo: { select: { id: true, nomeArquivo: true, tipo: true, tamanho: true } },
+        },
+      });
     });
     return NextResponse.json(orcamento, { status: 201 });
   } catch (e) {

@@ -6,7 +6,7 @@ import { ExcluirOrcamentoBotao } from "@/components/ExcluirOrcamentoBotao";
 import { corStatusOrcamento, labelStatusOrcamento } from "@/lib/constants";
 import { formatarBRL } from "@/lib/money";
 import { formatarDataBR } from "@/lib/date-utils";
-import type { OrcamentoComPrestador } from "@/types";
+import type { OrcamentoComRelacoes } from "@/types";
 
 export function OrcamentoCard({
   orcamento,
@@ -14,7 +14,7 @@ export function OrcamentoCard({
   menorCentavos,
   totalCandidatos = 0,
 }: {
-  orcamento: OrcamentoComPrestador;
+  orcamento: OrcamentoComRelacoes;
   maisBarato?: boolean;
   menorCentavos?: number;
   totalCandidatos?: number;
@@ -39,7 +39,9 @@ export function OrcamentoCard({
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0">
           <p className="truncate font-semibold text-foreground">{orcamento.prestador.nome}</p>
-          <p className="truncate text-sm text-muted">{orcamento.descricao}</p>
+          {orcamento.descricao ? (
+            <p className="truncate text-sm text-muted">{orcamento.descricao}</p>
+          ) : null}
         </div>
         <Badge cor={corStatusOrcamento(orcamento.status)}>
           {labelStatusOrcamento(orcamento.status)}
@@ -75,6 +77,17 @@ export function OrcamentoCard({
       ) : null}
 
       <div className="mt-3 flex flex-wrap items-center gap-4">
+        {orcamento.anexo ? (
+          <a
+            href={`/api/orcamentos/${orcamento.id}/anexo`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-1.5 text-sm font-medium text-primary"
+          >
+            <Icon name="orcamentos" className="size-4" />
+            Ver PDF
+          </a>
+        ) : null}
         <Link
           href={`/orcamentos/${orcamento.id}/editar`}
           className="inline-flex items-center gap-1.5 text-sm font-medium text-primary"

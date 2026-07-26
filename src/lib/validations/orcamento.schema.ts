@@ -4,7 +4,15 @@ import { dataValida } from "@/lib/date-utils";
 
 export const orcamentoSchema = z.object({
   prestadorId: z.coerce.number().int().positive("Selecione um prestador"),
-  descricao: z.string().trim().min(2, "Descreva o serviço orçado").max(200),
+  // Nome do serviço a que este orçamento se refere. A API resolve (acha ou cria)
+  // o Servico por este nome — é ele que define o "balde" de comparação.
+  servicoNome: z
+    .string()
+    .trim()
+    .min(2, "Diga para qual serviço é este orçamento")
+    .max(120, "Nome do serviço muito longo"),
+  // Detalhe opcional deste orçamento específico (o "o que é" fica no serviço).
+  descricao: z.string().trim().max(200).optional().nullable(),
   // A API recebe o valor já em centavos como NÚMERO (o form converte antes de
   // enviar). Sem z.coerce de propósito: coerce aceitaria true->1, [200]->200 etc.
   valorCentavos: z

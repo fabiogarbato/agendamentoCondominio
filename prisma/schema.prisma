@@ -102,14 +102,38 @@ model Agendamento {
 }
 
 // -----------------------------------------------------------------------------
+// Serviço (o "trabalho" que se quer contratar; ex.: "Papel de parede",
+// "Persiana automática"). É a UNIDADE DE COMPARAÇÃO: só faz sentido comparar
+// preços de orçamentos que são para o MESMO serviço. Antes a tela comparava por
+// categoria do prestador, o que misturava serviços diferentes do mesmo
+// prestador (papel de parede x persiana) — agora cada orçamento aponta para um
+// serviço e a comparação acontece dentro do serviço.
+// -----------------------------------------------------------------------------
+model Servico {
+  id Int @id @default(autoincrement())
+
+  nome        String
+  observacoes String?
+
+  criadoEm     DateTime @default(now())
+  atualizadoEm DateTime @updatedAt
+
+  orcamentos Orcamento[]
+
+  @@index([nome])
+  @@map("servicos")
+}
+
+// -----------------------------------------------------------------------------
 // Orçamento (preço que um prestador passou para um serviço).
-// Serve para comparar prestadores da mesma categoria e ver qual é mais barato.
+// Serve para comparar prestadores para o MESMO serviço e ver qual é mais barato.
 // -----------------------------------------------------------------------------
 model Orcamento {
   id Int @id @default(autoincrement())
 
-  // O que foi orçado (ex.: "Troca do disjuntor geral").
-  descricao String
+  // Detalhe opcional deste orçamento específico (ex.: "com material incluso",
+  // "3 demãos"). O "o que é" fica no Serviço; aqui é só um complemento.
+  descricao String?
 
   // Valor em CENTAVOS de BRL. Ex.: R$ 1.250,50 -> 125050.
   // Int de propósito: o SQLite não tem tipo decimal real (DECIMAL cai em
@@ -128,16 +152,50 @@ model Orcamento {
 
   observacoes String?
 
+  servicoId Int
+  // onDelete: Restrict -> não apagar um serviço que ainda tem orçamentos.
+  servico Servico @relation(fields: [servicoId], references: [id], onDelete: Restrict)
+
   prestadorId Int
   // onDelete: Restrict -> igual a Agendamento: nunca apagar orçamentos via cascade
   // nem deixá-los órfãos. Prestador com orçamento sai por soft delete (ativo=false);
   // hard delete só quando não há agendamento NEM orçamento.
   prestador Prestador @relation(fields: [prestadorId], references: [id], onDelete: Restrict)
 
+  // Anexo (PDF do orçamento) opcional, 1:1. Cascade: o PDF pertence 100% ao
+  // orçamento — apagou o orçamento, some o PDF junto.
+  anexo Anexo?
+
   criadoEm     DateTime @default(now())
   atualizadoEm DateTime @updatedAt
 
   @@index([prestadorId])
   @@index([status])
+  @@index([servicoId])
   @@map("orcamentos")
+}
+
+// -----------------------------------------------------------------------------
+// Anexo (PDF que o prestador mandou, guardado DENTRO do banco como BLOB).
+// Motivo de ir no banco em vez de disco: o único armazenamento persistido no
+// Docker é o volume do SQLite (/app/data). Guardando o PDF aqui ele persiste de
+// graça junto com o banco, sem precisar montar um volume separado para uploads.
+// O conteúdo (conteudo) NUNCA é selecionado nas listagens — só na rota de
+// download — para não carregar megabytes de PDF em memória à toa.
+// -----------------------------------------------------------------------------
+model Anexo {
+  id Int @id @default(autoincrement())
+
+  nomeArquivo String // nome original do arquivo (ex.: "orcamento-nalu.pdf")
+  tipo        String // MIME (ex.: "application/pdf")
+  tamanho     Int // bytes
+  conteudo    Bytes // o PDF em si
+
+  orcamentoId Int       @unique
+  orcamento   Orcamento @relation(fields: [orcamentoId], references: [id], onDelete: Cascade)
+
+  criadoEm     DateTime @default(now())
+  atualizadoEm DateTime @updatedAt
+
+  @@map("anexos")
 }

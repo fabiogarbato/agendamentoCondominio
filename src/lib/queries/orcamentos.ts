@@ -1,17 +1,24 @@
+import type { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 
-const comPrestador = { prestador: true } as const;
+// Serviço + prestador + metadados do anexo (NUNCA o conteúdo/blob aqui: o PDF só
+// é carregado na rota de download, para não trazer megabytes para as listagens).
+const incluirRelacoes = {
+  servico: true,
+  prestador: true,
+  anexo: { select: { id: true, nomeArquivo: true, tipo: true, tamanho: true } },
+} satisfies Prisma.OrcamentoInclude;
 
-/** Lista para comparação. Filtro opcional por categoria (via relação).
- *  Ordena por categoria e depois pelo mais barato; a página só agrupa. */
-export function listarOrcamentos(opts: { categoria?: string } = {}) {
+/** Lista para comparação. Ordena por serviço e depois pelo mais barato; a página
+ *  agrupa por serviço (a unidade de comparação). */
+export function listarOrcamentos(opts: { servicoId?: number } = {}) {
   return prisma.orcamento.findMany({
-    where: opts.categoria ? { prestador: { categoria: opts.categoria } } : {},
-    orderBy: [{ prestador: { categoria: "asc" } }, { valorCentavos: "asc" }],
-    include: comPrestador,
+    where: opts.servicoId ? { servicoId: opts.servicoId } : {},
+    orderBy: [{ servico: { nome: "asc" } }, { valorCentavos: "asc" }],
+    include: incluirRelacoes,
   });
 }
 
 export function obterOrcamento(id: number) {
-  return prisma.orcamento.findUnique({ where: { id }, include: comPrestador });
+  return prisma.orcamento.findUnique({ where: { id }, include: incluirRelacoes });
 }
