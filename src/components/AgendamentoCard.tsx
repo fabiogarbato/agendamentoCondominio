@@ -37,7 +37,11 @@ export function AgendamentoCard({ agendamento }: { agendamento: AgendamentoComPr
 
       <p className="mt-1 text-sm text-muted">{agendamento.motivo}</p>
 
-      <div className="mt-3 flex items-center justify-between gap-2">
+      {/* flex-wrap como no PrestadorCard e no OrcamentoCard: sem ele o par
+          Concluir/Cancelar (214px fixos) estoura o card em tela estreita e
+          quando o usuário aumenta a fonte do navegador — vira rolagem
+          horizontal na página inteira, em vez de quebrar em duas linhas. */}
+      <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
         <Link
           href={`/agendamentos/${agendamento.id}/editar`}
           className="inline-flex items-center gap-1.5 text-sm font-medium text-primary"

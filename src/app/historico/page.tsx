@@ -28,10 +28,12 @@ export default async function HistoricoPage({
       <PageHeader title="Histórico" />
 
       <form
-        className="flex flex-col gap-3 rounded-2xl border border-border bg-card p-4 shadow-card"
+        className="grid grid-cols-1 gap-3 rounded-2xl border border-border bg-card p-4 shadow-card lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)_auto] lg:items-end"
         method="get"
       >
-        <div className="grid grid-cols-2 gap-3">
+        {/* lg:contents dissolve o wrapper no desktop: De/Até viram itens do grid
+            do form, na mesma linha do Status e do botão, sem mexer no HTML. */}
+        <div className="grid grid-cols-2 gap-3 lg:contents">
           <label className="flex flex-col gap-1.5 text-sm">
             <span className="font-medium text-foreground">De</span>
             <input type="date" name="dataInicio" defaultValue={params.dataInicio ?? ""} className={CAMPO} />
@@ -63,7 +65,7 @@ export default async function HistoricoPage({
         </label>
         <button
           type="submit"
-          className="min-h-11 rounded-xl bg-primary px-4 text-sm font-medium text-primary-foreground shadow-card transition-colors hover:bg-primary-hover"
+          className="min-h-11 rounded-xl bg-primary px-4 text-sm font-medium text-primary-foreground shadow-card transition-colors hover:bg-primary-hover lg:px-8"
         >
           Filtrar
         </button>
@@ -76,7 +78,7 @@ export default async function HistoricoPage({
           descricao="Ajuste os filtros acima."
         />
       ) : (
-        <div className="flex flex-col gap-3">
+        <div className="grid grid-cols-1 gap-3 xl:grid-cols-2">
           {agendamentos.map((a) => (
             <AgendamentoCard key={a.id} agendamento={a} />
           ))}

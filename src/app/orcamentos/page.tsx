@@ -55,7 +55,7 @@ export default async function OrcamentosPage() {
         />
       ) : null}
 
-      <LinkButton href="/orcamentos/novo">
+      <LinkButton href="/orcamentos/novo" className="lg:self-start">
         <Icon name="plus" className="size-4" />
         Novo orçamento
       </LinkButton>
@@ -77,6 +77,14 @@ export default async function OrcamentosPage() {
             const maior = candidatos[candidatos.length - 1]?.valorCentavos;
             const idMaisBarato = candidatos[0]?.id;
             const qtd = grupo.itens.length;
+            // Rótulo do link de adicionar: precisa fazer sentido com 0, 1 e N
+            // candidatos — "Adicionar outro para comparar" só cabe quando há 1.
+            const rotuloAdicionar =
+              candidatos.length === 0
+                ? "Adicionar um orçamento deste serviço"
+                : candidatos.length === 1
+                  ? "Adicionar outro para comparar"
+                  : "Adicionar mais um para comparar";
 
             return (
               <section key={grupo.servicoId} className="flex flex-col gap-3">
@@ -106,7 +114,11 @@ export default async function OrcamentosPage() {
                   ) : null}
                 </div>
 
-                <div className="flex flex-col gap-3">
+                {/* 2 colunas só a partir de xl (1280): o rodapé do card pode ter
+                    até 5 ações (com PDF anexado) e mede 451px de largura natural.
+                    Em 1024 a coluna daria 313px úteis e o rodapé quebraria em 5
+                    de 8 cards. 3 colunas nunca cabem — saturariam em 355px. */}
+                <div className="grid grid-cols-1 gap-3 xl:grid-cols-2">
                   {ordenados.map((o) => (
                     <OrcamentoCard
                       key={o.id}
@@ -118,15 +130,19 @@ export default async function OrcamentosPage() {
                   ))}
                 </div>
 
-                {candidatos.length < 2 ? (
-                  <Link
-                    href={`/orcamentos/novo?servico=${encodeURIComponent(grupo.titulo)}`}
-                    className="inline-flex items-center gap-1.5 px-1 text-xs font-medium text-primary"
-                  >
-                    <Icon name="plus" className="size-3.5" />
-                    Adicionar outro para comparar
-                  </Link>
-                ) : null}
+                {/* Não existe limite de orçamentos por serviço: listarOrcamentos
+                    (src/lib/queries/orcamentos.ts) não tem take nem corte, o
+                    POST /api/orcamentos não valida quantidade e o ordenados.map
+                    acima renderiza todos. O que dava a falsa impressão de teto
+                    era ESTE link sumir ao chegar em 2 candidatos. Agora ele fica
+                    sempre visível. */}
+                <Link
+                  href={`/orcamentos/novo?servico=${encodeURIComponent(grupo.titulo)}`}
+                  className="inline-flex items-center gap-1.5 px-1 text-xs font-medium text-primary"
+                >
+                  <Icon name="plus" className="size-3.5" />
+                  {rotuloAdicionar}
+                </Link>
               </section>
             );
           })}

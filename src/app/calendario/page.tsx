@@ -9,6 +9,21 @@ import { MESES_LABEL, gradeDoMes } from "@/lib/date-utils";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
+/** Máximo de chips por dia dentro da célula no desktop.
+ *  INVARIANTE MEDIDO: a altura natural da célula é 29px (só o número do dia) +
+ *  18px por linha de chip. Com 3 chips + a linha "+N mais" dá 103px, que cabe
+ *  nos 112px do lg:min-h-28 da célula — é ISSO que mantém todas as semanas com
+ *  a mesma altura, mesmo a grade sendo um grid POR SEMANA.
+ *  Se subir para 4, a altura natural vai a 121px e é OBRIGATÓRIO trocar a
+ *  célula para lg:min-h-32 (128px), senão as semanas ficam desiguais. */
+const CHIPS_POR_DIA = 3;
+
+const CHIP_STATUS: Record<string, string> = {
+  AGENDADO: "bg-agendado-bg text-agendado-fg",
+  CONCLUIDO: "bg-concluido-bg text-concluido-fg",
+  CANCELADO: "bg-cancelado-bg text-cancelado-fg line-through",
+};
+
 function mesAdjacente(ano: number, mes: number, delta: number) {
   const total = (ano * 12 + (mes - 1)) + delta;
   const novoAno = Math.floor(total / 12);
@@ -74,17 +89,37 @@ export default async function CalendarioPage({
         {semanas.map((semana, i) => (
           <div key={i} className="grid grid-cols-7">
             {semana.map((celula) => {
-              const qtd = porDia.get(celula.data)?.length ?? 0;
+              const lista = porDia.get(celula.data) ?? [];
               return (
                 <div
                   key={celula.data}
-                  className={`flex aspect-square flex-col items-center justify-center border-b border-r border-border text-sm last:border-r-0 ${
+                  className={`flex aspect-square flex-col items-center justify-center border-b border-r border-border text-sm last:border-r-0 lg:aspect-auto lg:min-h-28 lg:min-w-0 lg:items-stretch lg:justify-start lg:gap-1 lg:p-1.5 ${
                     celula.foraDoMes ? "text-muted-faint" : "text-foreground"
                   } ${celula.hoje ? "bg-primary/10 font-bold text-primary-hover" : ""}`}
                 >
-                  <span>{celula.dia}</span>
-                  {qtd > 0 ? (
-                    <span className="mt-0.5 h-1.5 w-1.5 rounded-full bg-primary" />
+                  <span className="lg:text-xs">{celula.dia}</span>
+                  {lista.length > 0 ? (
+                    <span className="mt-0.5 h-1.5 w-1.5 rounded-full bg-primary lg:hidden" />
+                  ) : null}
+                  {lista.length > 0 ? (
+                    <ul className="hidden min-w-0 lg:flex lg:flex-col lg:gap-0.5">
+                      {lista.slice(0, CHIPS_POR_DIA).map((a) => (
+                        <li key={a.id} className="min-w-0">
+                          <Link
+                            href={`/agendamentos/${a.id}/editar`}
+                            title={`${a.horario} — ${a.prestador.nome}: ${a.motivo}`}
+                            className={`block truncate rounded px-1.5 text-[11px] font-medium leading-4 ${CHIP_STATUS[a.status] ?? ""}`}
+                          >
+                            {a.horario} {a.prestador.nome}
+                          </Link>
+                        </li>
+                      ))}
+                      {lista.length > CHIPS_POR_DIA ? (
+                        <li className="truncate px-1.5 text-[11px] font-normal leading-4 text-muted">
+                          +{lista.length - CHIPS_POR_DIA} mais
+                        </li>
+                      ) : null}
+                    </ul>
                   ) : null}
                 </div>
               );
@@ -96,7 +131,13 @@ export default async function CalendarioPage({
       {agendamentos.length === 0 ? (
         <EmptyState titulo="Nenhum agendamento neste mês" />
       ) : (
-        <div className="flex flex-col gap-3">
+        <div className="grid grid-cols-1 gap-3 xl:grid-cols-2">
+          {/* A lista NÃO some no desktop: o chip da célula é só relance, não tem
+              Concluir/Cancelar (StatusAcoes só existe dentro do AgendamentoCard),
+              então escondê-la tiraria as únicas ações da tela. */}
+          <h2 className="hidden text-xs font-semibold uppercase tracking-[0.08em] text-muted lg:block xl:col-span-full">
+            Todos os agendamentos do mês
+          </h2>
           {agendamentos.map((a) => (
             <AgendamentoCard key={a.id} agendamento={a} />
           ))}

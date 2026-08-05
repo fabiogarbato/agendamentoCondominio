@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/Button";
 import { CampoArea, CampoSelect, CampoTexto } from "@/components/ui/Campo";
 import { apiFetch, ApiError } from "@/lib/api-client";
 import { CATEGORIAS_PRESTADOR } from "@/lib/constants";
+import { formatarTelefoneBR, normalizarTelefoneBR } from "@/lib/telefone";
 import type { Prestador } from "@/types";
 
 export function PrestadorForm({ prestador }: { prestador?: Prestador }) {
@@ -22,6 +23,22 @@ export function PrestadorForm({ prestador }: { prestador?: Prestador }) {
 
   const [enviando, setEnviando] = useState(false);
   const [errosCampo, setErrosCampo] = useState<Record<string, string>>({});
+
+  // Aviso (NÃO bloqueio — o schema continua intocado): mostra exatamente qual número
+  // o botão de WhatsApp vai abrir. É a compensação humana para o caso em que
+  // completamos o nono dígito, que é indistinguível de um número digitado errado.
+  const telNormalizado = normalizarTelefoneBR(telefone);
+  const avisoAlerta = telNormalizado?.nonoDigitoAdicionado === true;
+  const avisoTelefone =
+    telefone.trim() === ""
+      ? null
+      : telNormalizado === null
+        ? "Não reconhecemos esse número como um telefone brasileiro. O botão de WhatsApp não vai aparecer no cartão do prestador."
+        : telNormalizado.nonoDigitoAdicionado
+          ? `Faltava o 9 do celular: completamos e o WhatsApp vai abrir em ${formatarTelefoneBR(telNormalizado)}. Confira se é esse mesmo o número antes de salvar.`
+          : telNormalizado.tipo === "fixo"
+            ? `Número fixo — o WhatsApp vai abrir em ${formatarTelefoneBR(telNormalizado)} (fixo não recebe o 9).`
+            : `O WhatsApp vai abrir em ${formatarTelefoneBR(telNormalizado)}.`;
 
   async function aoSubmeter(event: FormEvent) {
     event.preventDefault();
@@ -110,16 +127,24 @@ export function PrestadorForm({ prestador }: { prestador?: Prestador }) {
         />
       ) : null}
 
-      <CampoTexto
-        label="Telefone"
-        name="telefone"
-        type="tel"
-        value={telefone}
-        onChange={(e) => setTelefone(e.target.value)}
-        erro={errosCampo.telefone}
-        required
-        placeholder="(41) 99999-9999"
-      />
+      <div className="flex flex-col gap-1.5">
+        <CampoTexto
+          label="Telefone"
+          name="telefone"
+          type="tel"
+          value={telefone}
+          onChange={(e) => setTelefone(e.target.value)}
+          erro={errosCampo.telefone}
+          required
+          placeholder="(11) 99999-9999"
+          aria-describedby={avisoTelefone ? "telefone-aviso" : undefined}
+        />
+        {avisoTelefone ? (
+          <p id="telefone-aviso" className={`text-sm ${avisoAlerta ? "text-danger" : "text-muted"}`}>
+            {avisoTelefone}
+          </p>
+        ) : null}
+      </div>
 
       <CampoTexto
         label="Empresa (opcional)"

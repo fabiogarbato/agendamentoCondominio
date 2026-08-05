@@ -3,27 +3,24 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Icon } from "@/components/ui/Icon";
-
-const ITENS = [
-  { href: "/", label: "Início", icone: "inicio" },
-  { href: "/calendario", label: "Calendário", icone: "calendario" },
-  { href: "/prestadores", label: "Prestadores", icone: "prestadores" },
-  { href: "/orcamentos", label: "Orçamentos", icone: "orcamentos" },
-  { href: "/historico", label: "Histórico", icone: "historico" },
-];
+import { NAV_ITENS, navAtivo } from "@/lib/nav-itens";
 
 export function NavBar() {
   const pathname = usePathname();
 
   return (
-    <nav className="fixed inset-x-0 bottom-0 z-20 border-t border-border bg-card/90 pb-[env(safe-area-inset-bottom)] backdrop-blur-md">
+    <nav
+      aria-label="Navegação principal"
+      className="fixed inset-x-0 bottom-0 z-20 border-t border-border bg-card/90 pb-[env(safe-area-inset-bottom)] backdrop-blur-md lg:hidden"
+    >
       <ul className="mx-auto flex max-w-xl">
-        {ITENS.map((item) => {
-          const ativo = item.href === "/" ? pathname === "/" : pathname.startsWith(item.href);
+        {NAV_ITENS.map((item) => {
+          const ativo = navAtivo(item.href, pathname);
           return (
             <li key={item.href} className="flex-1">
               <Link
                 href={item.href}
+                aria-current={ativo ? "page" : undefined}
                 className="group flex min-h-14 flex-col items-center justify-center gap-1"
               >
                 <span

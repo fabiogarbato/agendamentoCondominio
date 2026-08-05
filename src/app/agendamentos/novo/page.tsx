@@ -8,7 +8,7 @@ export default async function NovoAgendamentoPage() {
   const prestadores = await listarPrestadores({ ativo: true });
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="flex flex-col gap-6 lg:mx-auto lg:max-w-2xl">
       <h1 className="text-xl font-bold">Novo agendamento</h1>
       <AgendamentoForm prestadores={prestadores} />
     </div>

@@ -17,7 +17,7 @@ export default async function EditarPrestadorPage({
   if (!prestador) notFound();
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="flex flex-col gap-6 lg:mx-auto lg:max-w-2xl">
       <h1 className="text-xl font-bold">Editar prestador</h1>
       <PrestadorForm prestador={prestador} />
     </div>

@@ -17,7 +17,7 @@ export default async function NovoOrcamentoPage({
   ]);
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="flex flex-col gap-6 lg:mx-auto lg:max-w-2xl">
       <h1 className="text-xl font-bold tracking-tight text-foreground">Novo orçamento</h1>
       <OrcamentoForm
         prestadores={prestadores}
